@@ -1,15 +1,13 @@
 use std::{
-    io::{BufRead, BufReader, Write},
+    io::Write,
     net::{TcpListener, TcpStream},
-    thread,
-    time::Duration,
 };
 
-use server::ThreadPool;
+use server::{request::Request, ThreadPool};
 
 const SERVER_ADDRESS: &str = "localhost:7070";
 
-fn main() -> std::io::Result<()> {
+fn main() {
     let listener = match TcpListener::bind(SERVER_ADDRESS) {
         Ok(listener) => listener,
         Err(_) => panic!("Failed to listen on {}!", SERVER_ADDRESS),
@@ -24,32 +22,28 @@ fn main() -> std::io::Result<()> {
             Ok(stream) => {
                 println!("Connection estaplished");
 
-                pool.execute(|| {
-                    handle_connection(stream).unwrap();
-                });
+                match Request::try_from(&stream) {
+                    Ok(request) => {
+                        pool.execute(move || {
+                            handle_connection(stream, request).unwrap();
+                        });
+                    }
+                    Err(_) => {
+                        eprintln!("Got Non-Http request");
+                        continue;
+                    }
+                };
             }
 
             Err(_) => panic!("A failed connection!"),
         };
     }
-
-    Ok(())
 }
 
-fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
-    let reader = BufReader::new(&mut stream);
+fn handle_connection(mut stream: TcpStream, request: Request) -> std::io::Result<()> {
+    println!("handle: {}", request.line.as_str());
 
-    // let request: Vec<_> = reader
-    //     .lines()
-    //     .filter_map(|line| line.ok())
-    //     .take_while(|line| !line.is_empty())
-    //     .collect();
-
-    // println!("Request: {:#?}", request);
-
-    let request_line = reader.lines().next().unwrap()?;
-
-    let (status_line, file) = match &request_line[..] {
+    let (status_line, file) = match request.line.as_str() {
         "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "index.html"),
         _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
     };
