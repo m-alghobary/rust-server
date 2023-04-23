@@ -1,3 +1,5 @@
+#![allow(clippy::invalid_regex)]
+
 use std::{
     io::{BufRead, BufReader},
     net::TcpStream,

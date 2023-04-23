@@ -3,7 +3,10 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use server::{request::Request, ThreadPool};
+mod request;
+mod threadpool;
+
+use crate::{request::Request, threadpool::ThreadPool};
 
 const SERVER_ADDRESS: &str = "localhost:7070";
 
