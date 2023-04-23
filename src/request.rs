@@ -5,6 +5,7 @@ use std::{
     net::TcpStream,
 };
 
+use lazy_static::lazy_static;
 use regex::Regex;
 
 pub struct Request {
@@ -22,9 +23,13 @@ impl TryFrom<&TcpStream> for Request {
     fn try_from(stream: &TcpStream) -> Result<Self, Self::Error> {
         let request_line = BufReader::new(stream).lines().next().unwrap().unwrap();
 
-        let http_regex = Regex::new(r"^(GET|POST|PUT|DELETE|PATCH)\s\/.*\sHTTP\/").unwrap();
+        // this is used to ensure that regular expression is compiled exactly once
+        lazy_static! {
+            static ref HTTP_REGEX: Regex =
+                Regex::new(r"^(GET|POST|PUT|DELETE|PATCH)\s\/.*\sHTTP\/").unwrap();
+        }
 
-        if !http_regex.is_match(&request_line) {
+        if !HTTP_REGEX.is_match(&request_line) {
             return Err(self::RequestParsingError::NonHttpRequest);
         }
 
