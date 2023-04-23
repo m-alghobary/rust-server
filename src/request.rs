@@ -8,13 +8,40 @@ use std::{
 use lazy_static::lazy_static;
 use regex::Regex;
 
+pub enum HttpMethod {
+    Get,
+    Post,
+    Put,
+    Patch,
+    Delete,
+}
+
+impl TryFrom<&str> for HttpMethod {
+    type Error = RequestParsingError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "GET" => Ok(HttpMethod::Get),
+            "POST" => Ok(HttpMethod::Post),
+            "PUT" => Ok(HttpMethod::Put),
+            "PATCH" => Ok(HttpMethod::Patch),
+            "DELETE" => Ok(HttpMethod::Delete),
+            _ => Err(self::RequestParsingError::InvalidHttpMethod),
+        }
+    }
+}
+
 pub struct Request {
     pub line: String,
+    pub method: HttpMethod,
+    pub path: String,
+    pub http_version: String,
 }
 
 #[derive(Debug)]
 pub enum RequestParsingError {
     NonHttpRequest,
+    InvalidHttpMethod,
 }
 
 impl TryFrom<&TcpStream> for Request {
@@ -33,6 +60,16 @@ impl TryFrom<&TcpStream> for Request {
             return Err(self::RequestParsingError::NonHttpRequest);
         }
 
-        Ok(Self { line: request_line })
+        let mut line_parts = request_line.split_whitespace();
+        let method = HttpMethod::try_from(line_parts.next().unwrap())?;
+        let path = line_parts.next().unwrap().to_owned();
+        let version = line_parts.next().unwrap().to_owned();
+
+        Ok(Self {
+            line: request_line,
+            method,
+            path,
+            http_version: version,
+        })
     }
 }

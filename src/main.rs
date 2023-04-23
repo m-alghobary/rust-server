@@ -6,7 +6,10 @@ use std::{
 mod request;
 mod threadpool;
 
-use crate::{request::Request, threadpool::ThreadPool};
+use crate::{
+    request::{HttpMethod, Request},
+    threadpool::ThreadPool,
+};
 
 const SERVER_ADDRESS: &str = "localhost:7070";
 
@@ -46,8 +49,11 @@ fn main() {
 fn handle_connection(mut stream: TcpStream, request: Request) -> std::io::Result<()> {
     println!("handle: {}", request.line.as_str());
 
-    let (status_line, file) = match request.line.as_str() {
-        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "index.html"),
+    let (status_line, file) = match request.method {
+        HttpMethod::Get => match request.path.as_str() {
+            "/" => ("HTTP/1.1 200 OK", "index.html"),
+            _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
+        },
         _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
     };
 
