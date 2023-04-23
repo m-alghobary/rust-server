@@ -1,9 +1,11 @@
 use std::{
-    io::{BufRead, BufReader, BufWriter, Write},
+    io::{BufRead, BufReader, Write},
     net::{TcpListener, TcpStream},
     thread,
     time::Duration,
 };
+
+use server::ThreadPool;
 
 const SERVER_ADDRESS: &str = "localhost:7070";
 
@@ -15,35 +17,48 @@ fn main() -> std::io::Result<()> {
 
     println!("Server is listening on {}", SERVER_ADDRESS);
 
+    let pool = ThreadPool::new(4);
+
     for stream in listener.incoming() {
         match stream {
-            Ok(mut stream) => handle_connection(&mut stream)?,
-            Err(_) => eprintln!("A failed connection!"),
-        }
+            Ok(stream) => {
+                println!("Connection estaplished");
+
+                pool.execute(|| {
+                    handle_connection(stream).unwrap();
+                });
+            }
+
+            Err(_) => panic!("A failed connection!"),
+        };
     }
 
     Ok(())
 }
 
-fn handle_connection(stream: &mut TcpStream) -> std::io::Result<()> {
-    println!(
-        "connection estaplished from {}",
-        stream.local_addr().unwrap().ip()
-    );
+fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
+    let reader = BufReader::new(&mut stream);
 
-    let mut writer = BufWriter::new(stream.try_clone()?);
-    let mut reader = BufReader::new(stream);
+    // let request: Vec<_> = reader
+    //     .lines()
+    //     .filter_map(|line| line.ok())
+    //     .take_while(|line| !line.is_empty())
+    //     .collect();
 
-    let mut line = String::new();
-    _ = reader.read_line(&mut line)?;
+    // println!("Request: {:#?}", request);
 
-    println!("Received message, {}", line);
+    let request_line = reader.lines().next().unwrap()?;
 
-    thread::sleep(Duration::from_secs(3));
+    let (status_line, file) = match &request_line[..] {
+        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "index.html"),
+        _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
+    };
 
-    writer.write_all(line.as_bytes())?;
+    let body = std::fs::read_to_string(format!("static/{file}"))?;
+    let length = body.len();
 
-    println!("Received message, {} back", line);
+    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{body}");
+    stream.write_all(response.as_bytes())?;
 
     Ok(())
 }
