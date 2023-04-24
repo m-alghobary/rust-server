@@ -1,13 +1,12 @@
-use std::{
-    io::Write,
-    net::{TcpListener, TcpStream},
-};
+use std::{io::Write, net::TcpListener};
 
 mod request;
+mod response;
 mod threadpool;
 
 use crate::{
     request::{HttpMethod, Request},
+    response::Response,
     threadpool::ThreadPool,
 };
 
@@ -25,13 +24,14 @@ fn main() {
 
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => {
+            Ok(mut stream) => {
                 println!("Connection estaplished");
 
                 match Request::try_from(&stream) {
                     Ok(request) => {
                         pool.execute(move || {
-                            handle_connection(stream, request).unwrap();
+                            let response = handle_connection(request).unwrap();
+                            stream.write_all(response.as_string().as_bytes()).unwrap();
                         });
                     }
                     Err(_) => {
@@ -46,22 +46,14 @@ fn main() {
     }
 }
 
-fn handle_connection(mut stream: TcpStream, request: Request) -> std::io::Result<()> {
+fn handle_connection(request: Request) -> std::io::Result<Response> {
     println!("handle: {}", request.line.as_str());
 
-    let (status_line, file) = match request.method {
+    match request.method {
         HttpMethod::Get => match request.path.as_str() {
-            "/" => ("HTTP/1.1 200 OK", "index.html"),
-            _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
+            "/" => Response::ok_from_file("static/index.html"),
+            _ => Response::not_found_from_file("static/404.html"),
         },
-        _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
-    };
-
-    let body = std::fs::read_to_string(format!("static/{file}"))?;
-    let length = body.len();
-
-    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{body}");
-    stream.write_all(response.as_bytes())?;
-
-    Ok(())
+        _ => Response::not_found_from_file("static/404.html"),
+    }
 }
