@@ -36,6 +36,7 @@ impl Server {
     ///
     /// It return std::io::Error if it can not listen on the provided address for any reasoun.
     /// Else it will start listening for connections
+    ///
     pub fn listen(&mut self, address: &str) -> std::io::Result<()> {
         self.address = address.to_owned();
         let listener = TcpListener::bind(address)?;
@@ -91,19 +92,58 @@ impl Server {
     where
         F: Fn(Request) -> Response + Send + Sync + 'static,
     {
-        let get_routes = self.routes.entry(HttpMethod::Get).or_insert(Vec::new());
+        self.register_route(HttpMethod::Get, path, handler);
+    }
 
-        let path_exist = get_routes.iter().any(|route| route.path == path);
+    /// Register an HTTP POST route handler
+    ///
+    /// # Panic
+    /// this method will panic if the path is already registered
+    ///
+    pub fn post<F>(&mut self, path: &str, handler: F)
+    where
+        F: Fn(Request) -> Response + Send + Sync + 'static,
+    {
+        self.register_route(HttpMethod::Post, path, handler);
+    }
+
+    /// Register an HTTP PUT route handler
+    ///
+    /// # Panic
+    /// this method will panic if the path is already registered
+    ///
+    pub fn put<F>(&mut self, path: &str, handler: F)
+    where
+        F: Fn(Request) -> Response + Send + Sync + 'static,
+    {
+        self.register_route(HttpMethod::Put, path, handler);
+    }
+
+    /// Register an HTTP DELETE route handler
+    ///
+    /// # Panic
+    /// this method will panic if the path is already registered
+    ///
+    pub fn delete<F>(&mut self, path: &str, handler: F)
+    where
+        F: Fn(Request) -> Response + Send + Sync + 'static,
+    {
+        self.register_route(HttpMethod::Delete, path, handler);
+    }
+
+    fn register_route<F>(&mut self, method: HttpMethod, path: &str, handler: F)
+    where
+        F: Fn(Request) -> Response + Send + Sync + 'static,
+    {
+        let method_routes = self.routes.entry(method).or_insert(Vec::new());
+
+        let path_exist = method_routes.iter().any(|route| route.path == path);
         if path_exist {
-            panic!("this `GET {}` path is already registered!", path);
+            panic!("this `{:?} {}` path is already registered!", method, path);
         }
 
         // register the route
-        get_routes.push(Route::new(
-            HttpMethod::Get,
-            path.to_owned(),
-            Arc::new(handler),
-        ));
+        method_routes.push(Route::new(method, path.to_owned(), Arc::new(handler)));
     }
 
     fn get_route(&mut self, method: HttpMethod, path: &String) -> Option<Route> {
