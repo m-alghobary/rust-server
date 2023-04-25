@@ -1,6 +1,11 @@
-use std::{io::Write, net::TcpListener};
+use std::{collections::HashMap, io::Write, net::TcpListener};
 
-use crate::{request::Request, response::Response, threadpool::ThreadPool};
+use crate::{
+    request::{HttpMethod, Request},
+    response::Response,
+    route::{Route, RouteHandler},
+    threadpool::ThreadPool,
+};
 
 /// The number of worker threads the server has in its pool of threads
 const THREAD_POOL_SIZE: usize = 4;
@@ -11,6 +16,9 @@ pub struct Server {
 
     /// a pool of worker threads the server uses to handle incoming request
     thread_pool: ThreadPool,
+
+    /// the list of registered routes
+    routes: HashMap<HttpMethod, Vec<Route>>,
 }
 
 impl Server {
@@ -20,9 +28,14 @@ impl Server {
         Self {
             address: String::new(),
             thread_pool,
+            routes: HashMap::new(),
         }
     }
 
+    /// Start listening on the provided address
+    ///
+    /// It return std::io::Error if it can not listen on the provided address for any reasoun.
+    /// Else it will start listening for connections
     pub fn listen(&mut self, address: &str) -> std::io::Result<()> {
         self.address = address.to_owned();
         let listener = TcpListener::bind(address)?;
@@ -58,5 +71,29 @@ impl Server {
         }
 
         Ok(())
+    }
+
+    /// Register an HTTP GET route handler
+    ///
+    /// # Panic
+    /// this method will panic if the path is already registered
+    ///
+    pub fn get<F>(&mut self, path: &str, handler: F)
+    where
+        F: FnOnce(Request) -> Response + Send + 'static,
+    {
+        let get_routes = self.routes.entry(HttpMethod::Get).or_insert(Vec::new());
+
+        let path_exist = get_routes.iter().any(|route| route.path == path);
+        if path_exist {
+            panic!("this `GET {}` path is already registered!", path);
+        }
+
+        // register the route
+        get_routes.push(Route::new(
+            HttpMethod::Get,
+            path.to_owned(),
+            Box::new(handler),
+        ));
     }
 }

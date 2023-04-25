@@ -8,6 +8,7 @@ use std::{
 use lazy_static::lazy_static;
 use regex::Regex;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum HttpMethod {
     Get,
     Post,
@@ -31,6 +32,7 @@ impl TryFrom<&str> for HttpMethod {
     }
 }
 
+#[derive(Debug)]
 pub struct Request {
     pub line: String,
     pub method: HttpMethod,
