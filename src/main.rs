@@ -14,9 +14,13 @@ const SERVER_ADDRESS: &str = "localhost:7070";
 fn main() -> std::io::Result<()> {
     let mut server = Server::new();
 
-    server.get("/", |request: Request| -> Response { todo!() });
+    server.get("/", |_request: Request| -> Response {
+        Response::ok_from_file("static/index.html").unwrap()
+    });
 
-    server.get("/about", |request: Request| -> Response { todo!() });
+    server.get("/about", |_request: Request| -> Response {
+        Response::ok("About")
+    });
 
     server.listen(SERVER_ADDRESS)?;
 

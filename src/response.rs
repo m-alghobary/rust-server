@@ -47,8 +47,26 @@ impl Response {
         Self::from_file(path, HttpStatusCode::Ok)
     }
 
+    pub fn ok(body: &str) -> Self {
+        Response {
+            http_version: "1.1".to_owned(),
+            status_code: HttpStatusCode::Ok,
+            headers: vec![],
+            body: body.to_owned(),
+        }
+    }
+
     pub fn not_found_from_file(path: &str) -> std::io::Result<Self> {
         Self::from_file(path, HttpStatusCode::NotFound)
+    }
+
+    pub fn not_found() -> Self {
+        Response {
+            http_version: "1.1".to_owned(),
+            status_code: HttpStatusCode::NotFound,
+            headers: vec![],
+            body: String::new(),
+        }
     }
 
     fn from_file(path: &str, status_code: HttpStatusCode) -> std::io::Result<Self> {

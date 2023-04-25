@@ -1,10 +1,13 @@
+use std::sync::Arc;
+
 use crate::{
     request::{HttpMethod, Request},
     response::Response,
 };
 
-pub type RouteHandler = Box<dyn FnOnce(Request) -> Response + Send + 'static>;
+pub type RouteHandler = Arc<dyn Fn(Request) -> Response + Send + Sync + 'static>;
 
+#[derive(Clone)]
 pub struct Route {
     pub method: HttpMethod,
     pub path: String,

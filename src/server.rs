@@ -1,9 +1,9 @@
-use std::{collections::HashMap, io::Write, net::TcpListener};
+use std::{collections::HashMap, io::Write, net::TcpListener, sync::Arc};
 
 use crate::{
     request::{HttpMethod, Request},
     response::Response,
-    route::{Route, RouteHandler},
+    route::Route,
     threadpool::ThreadPool,
 };
 
@@ -50,18 +50,27 @@ impl Server {
             // try to read request data from the TcpStream and construct an HTTP Request object from it
             // this will fail if the request was not an HTTP Request
             match Request::try_from(&stream) {
-                Ok(_request) => {
+                Ok(request) => {
                     // if we got an HTTP Request,
                     //
-                    // TODO: Missing things to do
                     // 1. we try to find any registered handler that matches the request method and path
-                    // 2. if we found one we dispatch a job useing the thread pool to execute the handler
-                    // 3. if we did not found any handler we return NOT FOUND error
+                    match self.get_route(request.method, &request.path) {
+                        // 2. if we found one we dispatch a job useing the thread pool to execute the handler
+                        Some(route) => {
+                            self.thread_pool.execute(move || {
+                                let response = (route.handler)(request);
+                                stream.write_all(response.as_string().as_bytes()).unwrap();
+                            });
+                        }
 
-                    self.thread_pool.execute(move || {
-                        let response = Response::ok_from_file("static/index.html").unwrap();
-                        stream.write_all(response.as_string().as_bytes()).unwrap();
-                    });
+                        // 3. if we did not found any handler we return NOT FOUND error
+                        None => {
+                            self.thread_pool.execute(move || {
+                                let response = Response::not_found();
+                                stream.write_all(response.as_string().as_bytes()).unwrap();
+                            });
+                        }
+                    };
                 }
                 Err(_) => {
                     eprintln!("Got Non-Http request");
@@ -80,7 +89,7 @@ impl Server {
     ///
     pub fn get<F>(&mut self, path: &str, handler: F)
     where
-        F: FnOnce(Request) -> Response + Send + 'static,
+        F: Fn(Request) -> Response + Send + Sync + 'static,
     {
         let get_routes = self.routes.entry(HttpMethod::Get).or_insert(Vec::new());
 
@@ -93,7 +102,16 @@ impl Server {
         get_routes.push(Route::new(
             HttpMethod::Get,
             path.to_owned(),
-            Box::new(handler),
+            Arc::new(handler),
         ));
+    }
+
+    fn get_route(&mut self, method: HttpMethod, path: &String) -> Option<Route> {
+        let method_routes = self.routes.entry(method).or_insert(Vec::new());
+
+        method_routes
+            .iter()
+            .find(|route| &route.path == path)
+            .map(|route| route.to_owned())
     }
 }
