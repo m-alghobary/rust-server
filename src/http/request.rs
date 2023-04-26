@@ -1,14 +1,15 @@
-#![allow(clippy::invalid_regex)]
+#![allow(clippy::invalid_regex, dead_code)]
 
 use std::{
     io::{BufRead, BufReader},
     net::TcpStream,
+    str::FromStr,
 };
 
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use super::{http_header::HttpHeader, http_method::HttpMethod};
+use super::{http_header::HttpHeader, http_method::HttpMethod, request_param::RequestParam};
 
 #[derive(Debug)]
 pub enum RequestParsingError {
@@ -22,15 +23,29 @@ pub struct Request {
     pub method: HttpMethod,
     pub path: String,
     pub http_version: String,
+    pub query_params: Vec<RequestParam>,
+    pub route_params: Vec<RequestParam>,
     pub headers: Vec<HttpHeader>,
     pub body: Option<String>,
 }
 
-// impl Request {
-//     pub fn get_query_param<T>(&self, name: String) -> Option<T> {
-//         todo!()
-//     }
-// }
+impl Request {
+    ///
+    /// Get a query paramater by its name and type
+    ///
+    /// It returns None if no param exist with the same name
+    /// or if the param exist but can not be parsed to the specified type T
+    ///
+    pub fn get_query_param<T: FromStr>(&self, name: &str) -> Option<T> {
+        match self.query_params.iter().find(|param| param.key == name) {
+            Some(param) => match param.parse::<T>() {
+                Ok(val) => Some(val),
+                Err(_) => None,
+            },
+            None => None,
+        }
+    }
+}
 
 impl TryFrom<&TcpStream> for Request {
     type Error = RequestParsingError;
@@ -50,7 +65,22 @@ impl TryFrom<&TcpStream> for Request {
 
         let mut line_parts = request_line.split_whitespace();
         let method = HttpMethod::try_from(line_parts.next().unwrap())?;
-        let path = line_parts.next().unwrap().to_owned();
+        let mut path = line_parts.next().unwrap().to_owned();
+
+        let mut query_params = vec![];
+        if let Some((new_path, query)) = path.split_once('?') {
+            query_params = query
+                .split('&')
+                .filter_map(|param| param.split_once('='))
+                .map(|(k, v)| RequestParam {
+                    key: k.to_owned(),
+                    value: v.to_owned(),
+                })
+                .collect();
+
+            path = new_path.to_owned();
+        }
+
         let version = line_parts.next().unwrap().to_owned();
 
         Ok(Self {
@@ -58,6 +88,8 @@ impl TryFrom<&TcpStream> for Request {
             method,
             path,
             http_version: version,
+            query_params,
+            route_params: vec![],
             headers: vec![],
             body: None,
         })

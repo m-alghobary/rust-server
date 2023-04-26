@@ -16,8 +16,9 @@ fn main() -> std::io::Result<()> {
         Response::ok_from_file("static/index.html").unwrap()
     });
 
-    server.get("/about", |_request: Request| -> Response {
-        Response::ok("About")
+    server.get("/about", |request: Request| -> Response {
+        let name: String = request.get_query_param("name").unwrap_or("Ali".to_owned());
+        Response::ok(format!("Hi {}", name).as_str())
     });
 
     server.listen(SERVER_ADDRESS)?;
