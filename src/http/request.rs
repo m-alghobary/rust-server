@@ -8,28 +8,12 @@ use std::{
 use lazy_static::lazy_static;
 use regex::Regex;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum HttpMethod {
-    Get,
-    Post,
-    Put,
-    Patch,
-    Delete,
-}
+use super::http_method::HttpMethod;
 
-impl TryFrom<&str> for HttpMethod {
-    type Error = RequestParsingError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "GET" => Ok(HttpMethod::Get),
-            "POST" => Ok(HttpMethod::Post),
-            "PUT" => Ok(HttpMethod::Put),
-            "PATCH" => Ok(HttpMethod::Patch),
-            "DELETE" => Ok(HttpMethod::Delete),
-            _ => Err(self::RequestParsingError::InvalidHttpMethod),
-        }
-    }
+#[derive(Debug)]
+pub enum RequestParsingError {
+    NonHttpRequest,
+    InvalidHttpMethod,
 }
 
 #[derive(Debug)]
@@ -40,11 +24,11 @@ pub struct Request {
     pub http_version: String,
 }
 
-#[derive(Debug)]
-pub enum RequestParsingError {
-    NonHttpRequest,
-    InvalidHttpMethod,
-}
+// impl Request {
+//     pub fn get_query_param<T>(&self, name: String) -> Option<T> {
+//         todo!()
+//     }
+// }
 
 impl TryFrom<&TcpStream> for Request {
     type Error = RequestParsingError;

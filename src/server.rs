@@ -1,8 +1,9 @@
+#![allow(dead_code)]
+
 use std::{collections::HashMap, io::Write, net::TcpListener, sync::Arc};
 
 use crate::{
-    request::{HttpMethod, Request},
-    response::Response,
+    http::{http_method::HttpMethod, request::Request, response::Response},
     route::Route,
     threadpool::ThreadPool,
 };

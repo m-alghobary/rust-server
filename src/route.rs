@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use crate::{
-    request::{HttpMethod, Request},
-    response::Response,
-};
+use crate::http::{http_method::HttpMethod, request::Request, response::Response};
 
 pub type RouteHandler = Arc<dyn Fn(Request) -> Response + Send + Sync + 'static>;
 

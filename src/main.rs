@@ -1,11 +1,9 @@
-mod request;
-mod response;
+mod http;
 mod route;
 mod server;
 mod threadpool;
 
-use request::Request;
-use response::Response;
+use http::{request::Request, response::Response};
 
 use crate::server::Server;
 
