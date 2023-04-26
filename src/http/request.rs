@@ -45,12 +45,8 @@ impl Request {
             None => None,
         }
     }
-}
 
-impl TryFrom<&TcpStream> for Request {
-    type Error = RequestParsingError;
-
-    fn try_from(stream: &TcpStream) -> Result<Self, Self::Error> {
+    pub fn parse(stream: &TcpStream) -> Result<Self, RequestParsingError> {
         let request_line = BufReader::new(stream).lines().next().unwrap().unwrap();
 
         // this is used to ensure that regular expression is compiled exactly once
@@ -65,10 +61,27 @@ impl TryFrom<&TcpStream> for Request {
 
         let mut line_parts = request_line.split_whitespace();
         let method = HttpMethod::try_from(line_parts.next().unwrap())?;
-        let mut path = line_parts.next().unwrap().to_owned();
+        let full_path = line_parts.next().unwrap().to_owned();
+        let version = line_parts.next().unwrap().to_owned();
 
+        let base_path = Self::parse_base_path(full_path.as_str());
+        let query_params = Self::parse_query_params(full_path.as_str());
+
+        Ok(Self {
+            line: request_line,
+            method,
+            path: base_path,
+            http_version: version,
+            query_params,
+            route_params: vec![],
+            headers: vec![],
+            body: None,
+        })
+    }
+
+    fn parse_query_params(path: &str) -> Vec<RequestParam> {
         let mut query_params = vec![];
-        if let Some((new_path, query)) = path.split_once('?') {
+        if let Some((_, query)) = path.split_once('?') {
             query_params = query
                 .split('&')
                 .filter_map(|param| param.split_once('='))
@@ -77,21 +90,15 @@ impl TryFrom<&TcpStream> for Request {
                     value: v.to_owned(),
                 })
                 .collect();
-
-            path = new_path.to_owned();
         }
 
-        let version = line_parts.next().unwrap().to_owned();
+        query_params
+    }
 
-        Ok(Self {
-            line: request_line,
-            method,
-            path,
-            http_version: version,
-            query_params,
-            route_params: vec![],
-            headers: vec![],
-            body: None,
-        })
+    fn parse_base_path(path: &str) -> String {
+        match path.split_once('?') {
+            Some((new_path, _)) => new_path.to_owned(),
+            None => path.to_owned(),
+        }
     }
 }

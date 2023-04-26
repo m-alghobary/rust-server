@@ -51,7 +51,7 @@ impl Server {
 
             // try to read request data from the TcpStream and construct an HTTP Request object from it
             // this will fail if the request was not an HTTP Request
-            match Request::try_from(&stream) {
+            match Request::parse(&stream) {
                 Ok(request) => {
                     // if we got an HTTP Request,
                     //
