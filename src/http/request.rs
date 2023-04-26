@@ -11,7 +11,7 @@ use regex::Regex;
 
 use super::{http_header::HttpHeader, http_method::HttpMethod, request_param::RequestParam};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum RequestParsingError {
     NonHttpRequest,
     InvalidHttpMethod,
@@ -19,13 +19,25 @@ pub enum RequestParsingError {
 
 #[derive(Debug)]
 pub struct Request {
+    /// The request line (ex; GET /home HTTP/1.1) is the first line in HTTP request
     pub line: String,
     pub method: HttpMethod,
-    pub path: String,
     pub http_version: String,
+
+    /// The request base path, without query parametres
+    pub path: String,
+
+    /// list of request query parametres
     pub query_params: Vec<RequestParam>,
+
+    /// list of request route parametres
     pub route_params: Vec<RequestParam>,
+
+    /// list of request headers as (key, value) paires
     pub headers: Vec<HttpHeader>,
+
+    /// The request body
+    /// it's of type Option becuase some request does not have a body like GET, DELETE
     pub body: Option<String>,
 }
 
@@ -60,7 +72,10 @@ impl Request {
         }
 
         let mut line_parts = request_line.split_whitespace();
+
+        // This may return InvalidHttpMethod error
         let method = HttpMethod::try_from(line_parts.next().unwrap())?;
+
         let full_path = line_parts.next().unwrap().to_owned();
         let version = line_parts.next().unwrap().to_owned();
 
