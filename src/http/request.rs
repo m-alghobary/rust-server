@@ -8,7 +8,7 @@ use std::{
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use super::http_method::HttpMethod;
+use super::{http_header::HttpHeader, http_method::HttpMethod};
 
 #[derive(Debug)]
 pub enum RequestParsingError {
@@ -22,6 +22,8 @@ pub struct Request {
     pub method: HttpMethod,
     pub path: String,
     pub http_version: String,
+    pub headers: Vec<HttpHeader>,
+    pub body: Option<String>,
 }
 
 // impl Request {
@@ -56,6 +58,8 @@ impl TryFrom<&TcpStream> for Request {
             method,
             path,
             http_version: version,
+            headers: vec![],
+            body: None,
         })
     }
 }

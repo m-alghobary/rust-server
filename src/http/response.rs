@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use super::http_header::HttpHeader;
+
 pub enum HttpStatusCode {
     Ok,
     NotFound,
@@ -21,17 +23,6 @@ impl HttpStatusCode {
             HttpStatusCode::NotFound => "NOT FOUND",
             HttpStatusCode::ServerError => "INTERNAL SERVER ERROR",
         }
-    }
-}
-
-pub struct HttpHeader {
-    key: String,
-    value: String,
-}
-
-impl HttpHeader {
-    fn parse(&self) -> String {
-        format!("{}: {}\r\n", self.key, self.value)
     }
 }
 
