@@ -49,16 +49,25 @@ impl Server {
 
             let mut stream = stream?;
 
-            // try to read request data from the TcpStream and construct an HTTP Request object from it
+            // try to read request data from the TcpStream and construct a basic HTTP Request object from it
             // this will fail if the request was not an HTTP Request
-            match Request::parse(&stream) {
-                Ok(request) => {
+            match Request::initial_parse(&stream) {
+                Ok(mut request) => {
                     // if we got an HTTP Request,
                     //
                     // 1. we try to find any registered handler that matches the request method and path
-                    match self.get_route(request.method, &request.path) {
+                    match self.get_route(request.method, &request.base_path) {
                         // 2. if we found one we dispatch a job useing the thread pool to execute the handler
                         Some(route) => {
+                            // after we get a matching route object we can now continue parsing the whole request object
+                            match request.complete_parsing(&stream, &route.path) {
+                                Ok(_) => {}
+                                Err(_) => {
+                                    eprintln!("Faild to complete parsing request {:?}", request);
+                                    continue;
+                                }
+                            }
+
                             self.thread_pool.execute(move || {
                                 let response = (route.handler)(request);
                                 stream.write_all(response.as_string().as_bytes()).unwrap();

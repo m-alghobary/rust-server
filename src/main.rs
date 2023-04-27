@@ -22,7 +22,7 @@ fn main() -> std::io::Result<()> {
     });
 
     server.get("/users/2", |request: Request| -> Response {
-        Response::ok(&request.path)
+        Response::ok(&request.base_path)
     });
 
     server.listen(SERVER_ADDRESS)?;
