@@ -60,7 +60,7 @@ impl Server {
                         // 2. if we found one we dispatch a job useing the thread pool to execute the handler
                         Some(route) => {
                             // after we get a matching route object we can now continue parsing the whole request object
-                            match request.complete_parsing(&stream, &route.path) {
+                            match request.complete_parsing(&stream, &route) {
                                 Ok(_) => {}
                                 Err(_) => {
                                     eprintln!("Faild to complete parsing request {:?}", request);

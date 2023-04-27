@@ -9,6 +9,8 @@ use std::{
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::route::Route;
+
 use super::{http_header::HttpHeader, http_method::HttpMethod, request_param::RequestParam};
 
 #[derive(Debug, Clone, Copy)]
@@ -53,6 +55,22 @@ impl Request {
     ///
     pub fn get_query_param<T: FromStr>(&self, name: &str) -> Option<T> {
         match self.query_params.iter().find(|param| param.key == name) {
+            Some(param) => match param.parse::<T>() {
+                Ok(val) => Some(val),
+                Err(_) => None,
+            },
+            None => None,
+        }
+    }
+
+    ///
+    /// Get a route paramater by its name and type
+    ///
+    /// It returns None if no param exist with the same name
+    /// or if the param exist but can not be parsed to the specified type T
+    ///
+    pub fn get_route_param<T: FromStr>(&self, name: &str) -> Option<T> {
+        match self.route_params.iter().find(|param| param.key == name) {
             Some(param) => match param.parse::<T>() {
                 Ok(val) => Some(val),
                 Err(_) => None,
@@ -109,21 +127,33 @@ impl Request {
     pub fn complete_parsing(
         &mut self,
         _stream: &TcpStream,
-        _matched_path: &str,
+        matched_route: &Route,
     ) -> Result<(), RequestParsingError> {
-        self.query_params = Self::parse_query_params(self.full_path.as_str());
-        // let route_params = Self::parse_route_params(full_path.as_str());
+        self.query_params = self.parse_query_params();
+        self.route_params = self.parse_route_params(matched_route);
 
         Ok(())
     }
 
-    // fn parse_route_params(path: &str) -> Vec<RequestParam> {
-    //     todo!()
-    // }
+    fn parse_route_params(&self, matched_route: &Route) -> Vec<RequestParam> {
+        let params = matched_route.get_params();
+        let param_indexs: Vec<_> = params.iter().map(|param| param.0).collect();
 
-    fn parse_query_params(path: &str) -> Vec<RequestParam> {
+        self.base_path
+            .split('/')
+            .enumerate()
+            .filter(|(i, _)| param_indexs.contains(i))
+            .enumerate()
+            .map(|(i, (_, val))| RequestParam {
+                key: params[i].1.to_owned(),
+                value: val.to_owned(),
+            })
+            .collect()
+    }
+
+    fn parse_query_params(&self) -> Vec<RequestParam> {
         let mut query_params = vec![];
-        if let Some((_, query)) = path.split_once('?') {
+        if let Some((_, query)) = self.full_path.split_once('?') {
             query_params = query
                 .split('&')
                 .filter_map(|param| param.split_once('='))
