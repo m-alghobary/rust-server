@@ -152,7 +152,39 @@ impl Server {
 
         method_routes
             .iter()
-            .find(|route| &route.path == path)
+            .find(|route| {
+                // if the two paths do not have the same number of slashes '/'
+                // this means they do not match
+                if route.path.split('/').count() != path.split('/').count() {
+                    return false;
+                }
+
+                // get the route params as (index, {name})
+                let route_params = route.get_params();
+                if route_params.is_empty() {
+                    // no params defined so we jsut compare the two paths as strings
+                    &route.path == path
+                } else {
+                    // here we know both paths have the same length (or slashes)
+                    // and we know the names and positions of the defined params,
+                    // so the paths will be considered a match if they have the same non-param sluts
+
+                    let param_indexs: Vec<_> = route_params.iter().map(|param| param.0).collect();
+
+                    route
+                        .path
+                        .split('/')
+                        .zip(path.split('/'))
+                        .enumerate()
+                        .all(|(i, (f, s))| {
+                            if !param_indexs.contains(&i) {
+                                return f == s;
+                            }
+
+                            true
+                        })
+                }
+            })
             .map(|route| route.to_owned())
     }
 }

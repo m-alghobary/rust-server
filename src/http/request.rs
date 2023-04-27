@@ -81,6 +81,7 @@ impl Request {
 
         let base_path = Self::parse_base_path(full_path.as_str());
         let query_params = Self::parse_query_params(full_path.as_str());
+        // let route_params = Self::parse_route_params(full_path.as_str());
 
         Ok(Self {
             line: request_line,
@@ -93,6 +94,10 @@ impl Request {
             body: None,
         })
     }
+
+    // fn parse_route_params(path: &str) -> Vec<RequestParam> {
+    //     todo!()
+    // }
 
     fn parse_query_params(path: &str) -> Vec<RequestParam> {
         let mut query_params = vec![];

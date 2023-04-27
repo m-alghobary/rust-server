@@ -19,4 +19,15 @@ impl Route {
             handler,
         }
     }
+
+    pub fn get_params(&self) -> Vec<(usize, &str)> {
+        let params: Vec<_> = self
+            .path
+            .split('/')
+            .enumerate()
+            .filter(|(_, part)| part.starts_with('{'))
+            .collect();
+
+        params
+    }
 }

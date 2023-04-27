@@ -21,6 +21,10 @@ fn main() -> std::io::Result<()> {
         Response::ok(format!("Hi {}", name).as_str())
     });
 
+    server.get("/users/2", |request: Request| -> Response {
+        Response::ok(&request.path)
+    });
+
     server.listen(SERVER_ADDRESS)?;
 
     Ok(())
