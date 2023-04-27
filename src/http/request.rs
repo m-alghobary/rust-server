@@ -132,6 +132,10 @@ impl Request {
         self.query_params = self.parse_query_params();
         self.route_params = self.parse_route_params(matched_route);
 
+        // TODO: add header parsing
+
+        // TODO: add body parsing
+
         Ok(())
     }
 

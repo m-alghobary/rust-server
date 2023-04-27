@@ -11,6 +11,13 @@ use crate::{
 /// The number of worker threads the server has in its pool of threads
 const THREAD_POOL_SIZE: usize = 4;
 
+///
+///  Missing features
+/// TODO: add support for max number of concurrent connections
+/// TODO: add support for request middlewares
+/// TODO: move routing related logic to a seprate router module
+///
+
 pub struct Server {
     /// The address (IP:PORT) this server is bound to
     address: String,
@@ -162,19 +169,19 @@ impl Server {
         method_routes
             .iter()
             .find(|route| {
-                // if the two paths do not have the same number of slashes '/'
+                // if the two paths do not have the same number of route segments
                 // this means they do not match
                 if route.path.split('/').count() != path.split('/').count() {
                     return false;
                 }
 
-                // get the route params as (index, {name})
+                // get the route params as (index, name)
                 let route_params = route.get_params();
                 if route_params.is_empty() {
                     // no params defined so we jsut compare the two paths as strings
                     &route.path == path
                 } else {
-                    // here we know both paths have the same length (or slashes)
+                    // here we know both paths have the same number of segments
                     // and we know the names and positions of the defined params,
                     // so the paths will be considered a match if they have the same non-param sluts
 
