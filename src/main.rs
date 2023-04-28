@@ -25,7 +25,8 @@ fn main() -> std::io::Result<()> {
                 Response::ok(format!("Hi user => {}", id).as_str())
             }),
     )
-    .listen(SERVER_ADDRESS)?;
+    .listen(SERVER_ADDRESS)?
+    .run()?;
 
     Ok(())
 }

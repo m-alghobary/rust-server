@@ -20,6 +20,9 @@ pub struct Server {
 
     /// the main application for request handling
     app: App,
+
+    /// if we fail to bind to the supplied address this will be None
+    listener: Option<TcpListener>,
 }
 
 impl Server {
@@ -30,21 +33,34 @@ impl Server {
             address: String::new(),
             thread_pool,
             app,
+            listener: None,
         }
     }
 
     /// Start listening on the provided address
     ///
     /// It return std::io::Error if it can not listen on the provided address for any reasoun.
-    /// Else it will start listening for connections
     ///
-    pub fn listen(&mut self, address: &str) -> std::io::Result<()> {
+    pub fn listen(mut self, address: &str) -> std::io::Result<Self> {
         self.address = address.to_owned();
-        let listener = TcpListener::bind(address)?;
 
-        println!("Server is listening on {}", address);
+        let bind_result = TcpListener::bind(address);
+        if let Ok(listener) = bind_result {
+            self.listener = Some(listener);
+        } else {
+            return Err(bind_result.unwrap_err());
+        }
 
-        for stream in listener.incoming() {
+        Ok(self)
+    }
+
+    ///
+    /// runs the app and start accepting connections
+    ///  
+    pub fn run(&mut self) -> std::io::Result<()> {
+        println!("Server is listening on {}", self.address);
+
+        for stream in self.listener.as_mut().unwrap().incoming() {
             println!("Connection estaplished");
 
             let mut stream = stream?;
