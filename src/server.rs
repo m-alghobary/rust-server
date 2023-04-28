@@ -3,20 +3,13 @@
 use std::{collections::HashMap, io::Write, net::TcpListener, sync::Arc};
 
 use crate::{
+    app::route::Route,
     http::{http_method::HttpMethod, request::Request, response::Response},
-    route::Route,
     threadpool::ThreadPool,
 };
 
 /// The number of worker threads the server has in its pool of threads
 const THREAD_POOL_SIZE: usize = 4;
-
-///
-///  Missing features
-/// TODO: add support for max number of concurrent connections
-/// TODO: add support for request middlewares
-/// TODO: move routing related logic to a seprate router module
-///
 
 pub struct Server {
     /// The address (IP:PORT) this server is bound to
