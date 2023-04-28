@@ -8,32 +8,30 @@ use crate::{
     threadpool::ThreadPool,
 };
 
-/// The number of worker threads the server has in its pool of threads
+/// The default number of worker threads the server has in its pool of threads
 const THREAD_POOL_SIZE: usize = 4;
 
 pub struct Server {
     /// The address (IP:PORT) this server is bound to
     address: String,
 
-    /// a pool of worker threads the server uses to handle incoming request
-    thread_pool: ThreadPool,
-
     /// the main application for request handling
     app: App,
 
     /// if we fail to bind to the supplied address this will be None
     listener: Option<TcpListener>,
+
+    /// max number of worker threads
+    workers_no: usize,
 }
 
 impl Server {
     pub fn new(app: App) -> Self {
-        let thread_pool = ThreadPool::new(THREAD_POOL_SIZE);
-
         Self {
             address: String::new(),
-            thread_pool,
             app,
             listener: None,
+            workers_no: THREAD_POOL_SIZE,
         }
     }
 
@@ -54,12 +52,18 @@ impl Server {
         Ok(self)
     }
 
+    pub fn set_workers_no(mut self, workers_no: usize) -> Self {
+        self.workers_no = workers_no;
+        self
+    }
+
     ///
     /// runs the app and start accepting connections
     ///  
     pub fn run(&mut self) -> std::io::Result<()> {
         println!("Server is listening on {}", self.address);
 
+        let thread_pool = ThreadPool::new(self.workers_no);
         for stream in self.listener.as_mut().unwrap().incoming() {
             println!("Connection estaplished");
 
@@ -84,7 +88,7 @@ impl Server {
                                 }
                             }
 
-                            self.thread_pool.execute(move || {
+                            thread_pool.execute(move || {
                                 let response = (route.handler)(request);
                                 stream.write_all(response.as_string().as_bytes()).unwrap();
                             });
@@ -92,7 +96,7 @@ impl Server {
 
                         // 3. if we did not found any handler we return NOT FOUND error
                         None => {
-                            self.thread_pool.execute(move || {
+                            thread_pool.execute(move || {
                                 let response = Response::not_found();
                                 stream.write_all(response.as_string().as_bytes()).unwrap();
                             });
