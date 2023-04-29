@@ -1,14 +1,9 @@
-mod app;
-mod http;
-mod server;
-mod threadpool;
-
-use app::App;
-use http::{request::Request, response::Response};
-
-use crate::server::Server;
-
 const SERVER_ADDRESS: &str = "localhost:7070";
+
+use rs_server::app::App;
+use rs_server::http::request::Request;
+use rs_server::http::response::Response;
+use rs_server::server::Server;
 
 fn main() -> std::io::Result<()> {
     Server::new(
