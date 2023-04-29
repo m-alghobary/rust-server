@@ -14,7 +14,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             routes: HashMap::new(),
         }
@@ -126,5 +126,11 @@ impl App {
                 }
             })
             .map(|route| route.to_owned())
+    }
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
     }
 }

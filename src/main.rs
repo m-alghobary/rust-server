@@ -7,7 +7,7 @@ use rs_server::server::Server;
 
 fn main() -> std::io::Result<()> {
     Server::new(
-        App::new()
+        App::default()
             .get("/", |_request: Request| -> Response {
                 Response::ok_from_file("static/index.html").unwrap()
             })
