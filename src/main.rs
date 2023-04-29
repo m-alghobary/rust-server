@@ -1,14 +1,20 @@
 const SERVER_ADDRESS: &str = "localhost:7070";
 
+use std::thread;
+use std::time::Duration;
+
 use rs_server::app::App;
 use rs_server::http::request::Request;
 use rs_server::http::response::Response;
 use rs_server::server::Server;
 
-fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
     Server::new(
         App::default()
             .get("/", |_request: Request| -> Response {
+                thread::sleep(Duration::from_secs(10));
+
                 Response::ok_from_file("static/index.html").unwrap()
             })
             .get("/about", |request: Request| -> Response {
@@ -21,7 +27,8 @@ fn main() -> std::io::Result<()> {
             }),
     )
     .listen(SERVER_ADDRESS)?
-    .run()?;
+    .run()
+    .await?;
 
     Ok(())
 }

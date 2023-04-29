@@ -13,3 +13,5 @@ name = "rs-server"
 [dependencies]
 lazy_static = "1.4.0"
 regex = "1"
+reqwest = "0.11"
+tokio = { version = "1", features = ["full"] }

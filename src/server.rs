@@ -5,7 +5,6 @@ use std::{io::Write, net::TcpListener};
 use crate::{
     app::App,
     http::{request::Request, response::Response},
-    threadpool::ThreadPool,
 };
 
 /// The default number of worker threads the server has in its pool of threads
@@ -60,14 +59,18 @@ impl Server {
     ///
     /// runs the app and start accepting connections
     ///  
-    pub fn run(&mut self) -> std::io::Result<()> {
+    pub async fn run(&mut self) -> std::io::Result<()> {
         println!("Server is listening on {}", self.address);
 
-        let thread_pool = ThreadPool::new(self.workers_no);
         for stream in self.listener.as_mut().unwrap().incoming() {
             println!("Connection estaplished");
 
-            let mut stream = stream?;
+            if let Err(e) = stream {
+                eprintln!("{}", e);
+                return Err(e);
+            }
+
+            let mut stream = stream.unwrap();
 
             // try to read request data from the TcpStream and construct a basic HTTP Request object from it
             // this will fail if the request was not an HTTP Request
@@ -88,7 +91,7 @@ impl Server {
                                 }
                             }
 
-                            thread_pool.execute(move || {
+                            tokio::spawn(async move {
                                 let response = (route.handler)(request);
                                 stream.write_all(response.as_string().as_bytes()).unwrap();
                             });
@@ -96,7 +99,7 @@ impl Server {
 
                         // 3. if we did not found any handler we return NOT FOUND error
                         None => {
-                            thread_pool.execute(move || {
+                            tokio::spawn(async move {
                                 let response = Response::not_found();
                                 stream.write_all(response.as_string().as_bytes()).unwrap();
                             });
